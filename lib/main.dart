@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:syncfusion_flutter_gauges/gauges.dart';
 
 void main() {
   runApp(MyApp());
@@ -31,6 +32,7 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
   bool isConnected = false;
   BluetoothConnection? connection;
   String receivedData = '';
+  String temperature = '0';
 
   @override
   void initState() {
@@ -108,6 +110,9 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
       print('Mensaje recibido: $message');
       setState(() {
         receivedData = message;
+        if (_isValidTemperature(message)) {
+          temperature = message.replaceAll(RegExp(r'[^0-9.]'), '');
+        }
       });
     }).onDone(() {
       print('Conexión cerrada');
@@ -117,50 +122,88 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
     });
   }
 
+  bool _isValidTemperature(String data) {
+    try {
+      double.parse(data.replaceAll(RegExp(r'[^0-9.]'), ''));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Demostración de Bluetooth'),
       ),
-      body: Column(
-        children: [
-          SizedBox(height: 20),
-          Text(
-            'Dispositivos Encontrados:',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: devices.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(devices[index].name ?? 'Dispositivo Desconocido'),
-                  subtitle: Text(devices[index].address),
-                  onTap: () {
-                    _connectToDevice(devices[index]);
-                  },
-                );
-              },
-            ),
-          ),
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _startScan,
-            child: Text('Iniciar Escaneo'),
-          ),
-          SizedBox(height: 20),
-          isConnected
-              ? Text(
-                  'Datos recibidos: $receivedData',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                )
-              : Text(
-                  'No conectado',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-        ],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            _buildDeviceList(),
+            SizedBox(height: 20),
+            _buildScanButton(),
+            SizedBox(height: 20),
+            _buildTemperatureGauge(),
+            SizedBox(height: 20),
+            _buildTemperatureText(),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildDeviceList() {
+    return isScanning
+        ? CircularProgressIndicator()
+        : devices.isEmpty
+            ? Text('No se encontraron dispositivos Bluetooth cercanos')
+            : Expanded(
+                child: ListView.builder(
+                  itemCount: devices.length,
+                  itemBuilder: (context, index) {
+                    final device = devices[index];
+                    return ListTile(
+                      title: Text(device.name ?? 'Dispositivo Desconocido'),
+                      subtitle: Text(device.address),
+                      onTap: () {
+                        _connectToDevice(device);
+                      },
+                    );
+                  },
+                ),
+              );
+  }
+
+  Widget _buildScanButton() {
+    return ElevatedButton(
+      onPressed: isScanning ? null : _startScan,
+      child: Text('Iniciar Escaneo'),
+    );
+  }
+
+  Widget _buildTemperatureGauge() {
+    return SfRadialGauge(
+      axes: <RadialAxis>[
+        RadialAxis(
+          minimum: 0,
+          maximum: 100,
+          ranges: <GaugeRange>[
+            GaugeRange(startValue: 0, endValue: 100, color: Colors.green)
+          ],
+          pointers: <GaugePointer>[
+            NeedlePointer(value: double.parse(temperature))
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget _buildTemperatureText() {
+    return Text(
+      'Temperatura: $temperature °C',
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
 
