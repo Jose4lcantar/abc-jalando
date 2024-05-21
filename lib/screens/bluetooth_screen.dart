@@ -1,15 +1,13 @@
 import 'dart:async';
-import 'dart:convert'; // Asegúrate de importar esto para `utf8`
-import 'dart:typed_data'; // Asegúrate de importar esto para `Uint8List`
+import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:abc/services/bluetooth_service.dart';
 import 'package:abc/widgets/device_list.dart';
 import 'package:abc/widgets/scan_button.dart';
-import 'package:abc/widgets/temperature_gauge.dart';
-import 'package:abc/widgets/temperature_text.dart';
+import 'package:abc/screens/graph_screen.dart';
 
 class BluetoothScreen extends StatefulWidget {
   @override
@@ -34,7 +32,7 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
     if (Platform.isAndroid) {
       PermissionStatus permissionStatus = await Permission.location.request();
       if (permissionStatus != PermissionStatus.granted) {
-        throw Exception('Permiso de ubicación no concedido');
+        throw Exception('Location permission not granted');
       }
 
       Map<Permission, PermissionStatus> permissionStatuses = await [
@@ -44,7 +42,7 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
 
       if (permissionStatuses[Permission.bluetoothConnect] != PermissionStatus.granted ||
           permissionStatuses[Permission.bluetoothScan] != PermissionStatus.granted) {
-        throw Exception('Permisos de Bluetooth no concedidos');
+        throw Exception('Bluetooth permissions not granted');
       }
     }
 
@@ -53,12 +51,12 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
       if (!isBluetoothOn) {
         bool enableBluetooth = (await FlutterBluetoothSerial.instance.requestEnable()) ?? false;
         if (!enableBluetooth) {
-          print('Bluetooth no habilitado');
+          print('Bluetooth not enabled');
           return;
         }
       }
     } catch (e) {
-      print("Error inicializando Bluetooth: $e");
+      print("Error initializing Bluetooth: $e");
     }
   }
 
@@ -75,7 +73,7 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
         isScanning = false;
       });
     } catch (e) {
-      print("Error escaneando dispositivos: $e");
+      print("Error scanning devices: $e");
     }
   }
 
@@ -87,22 +85,27 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
       });
       _startListening();
     } catch (ex) {
-      print("Error al conectar: $ex");
+      print("Error connecting: $ex");
     }
   }
 
   void _startListening() {
     connection?.input?.listen((Uint8List data) {
       String message = utf8.decode(data);
-      print('Mensaje recibido: $message');
+      print('Received message: $message');
       setState(() {
         receivedData = message;
         if (_isValidTemperature(message)) {
           temperature = message.replaceAll(RegExp(r'[^0-9.]'), '');
+          // Actualizar la gráfica en tiempo real
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => GraphScreen(temperature: temperature)),
+          );
         }
       });
     }).onDone(() {
-      print('Conexión cerrada');
+      print('Connection closed');
       setState(() {
         isConnected = false;
       });
@@ -120,30 +123,31 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Demostración de Bluetooth'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            DeviceList(
-              devices: devices,
-              isScanning: isScanning,
-              onDeviceTap: _connectToDevice,
-            ),
-            SizedBox(height: 20),
-            ScanButton(
-              isScanning: isScanning,
-              onScan: _startScan,
-            ),
-            SizedBox(height: 20),
-            TemperatureGauge(temperature: temperature),
-            SizedBox(height: 20),
-            TemperatureText(temperature: temperature),
-          ],
-        ),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          DeviceList(
+            devices: devices,
+            isScanning: isScanning,
+            onDeviceTap: _connectToDevice,
+          ),
+          SizedBox(height: 20),
+          ScanButton(
+            isScanning: isScanning,
+            onScan: _startScan,
+          ),
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => GraphScreen(temperature: temperature)),
+              );
+            },
+            child: Text('View Graph'),
+          ),
+        ],
       ),
     );
   }
