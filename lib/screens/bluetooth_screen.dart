@@ -20,7 +20,8 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
   bool isConnected = false;
   BluetoothConnection? connection;
   String receivedData = '';
-  String temperature = '0';
+  ValueNotifier<String> temperatureNotifier = ValueNotifier<String>('0');
+  bool showMessage = false;
 
   @override
   void initState() {
@@ -82,6 +83,7 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
       connection = await BluetoothConnection.toAddress(device.address);
       setState(() {
         isConnected = true;
+        showMessage = true;
       });
       _startListening();
     } catch (ex) {
@@ -96,12 +98,7 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
       setState(() {
         receivedData = message;
         if (_isValidTemperature(message)) {
-          temperature = message.replaceAll(RegExp(r'[^0-9.]'), '');
-          // Actualizar la gráfica en tiempo real
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => GraphScreen(temperature: temperature)),
-          );
+          temperatureNotifier.value = message.replaceAll(RegExp(r'[^0-9.]'), '');
         }
       });
     }).onDone(() {
@@ -123,6 +120,53 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return PageView(
+      children: <Widget>[
+        ScanPage(
+          devices: devices,
+          isScanning: isScanning,
+          isConnected: isConnected,
+          showMessage: showMessage,
+          onDeviceTap: _connectToDevice,
+          onScan: _startScan,
+        ),
+        ValueListenableBuilder<String>(
+          valueListenable: temperatureNotifier,
+          builder: (context, temperature, child) {
+            return GraphScreen(temperature: temperature);
+          },
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    connection?.dispose();
+    temperatureNotifier.dispose();
+    super.dispose();
+  }
+}
+
+class ScanPage extends StatelessWidget {
+  final List<BluetoothDevice> devices;
+  final bool isScanning;
+  final bool isConnected;
+  final bool showMessage;
+  final Function(BluetoothDevice) onDeviceTap;
+  final VoidCallback onScan;
+
+  ScanPage({
+    required this.devices,
+    required this.isScanning,
+    required this.isConnected,
+    required this.showMessage,
+    required this.onDeviceTap,
+    required this.onScan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -130,31 +174,30 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
           DeviceList(
             devices: devices,
             isScanning: isScanning,
-            onDeviceTap: _connectToDevice,
+            onDeviceTap: onDeviceTap,
           ),
           SizedBox(height: 20),
           ScanButton(
             isScanning: isScanning,
-            onScan: _startScan,
+            onScan: onScan,
           ),
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => GraphScreen(temperature: temperature)),
-              );
-            },
-            child: Text('View Graph'),
-          ),
+          if (isConnected)
+            Column(
+              children: <Widget>[
+                SizedBox(height: 20),
+                Text(
+                  'Conexión exitosa',
+                  style: TextStyle(color: Colors.green, fontSize: 16),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Desliza hacia la izquierda para ver la gráfica',
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+              ],
+            ),
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    connection?.dispose();
-    super.dispose();
   }
 }
