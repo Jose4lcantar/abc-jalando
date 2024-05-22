@@ -12,7 +12,9 @@ class GraphScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Temperature Graph'),
+        title: Text(
+          'Gráfica',
+          textAlign: TextAlign.center,),
       ),
       body: Center(
         child: Column(

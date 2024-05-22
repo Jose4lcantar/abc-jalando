@@ -9,6 +9,9 @@ import 'package:abc/widgets/device_list.dart';
 import 'package:abc/widgets/scan_button.dart';
 import 'package:abc/screens/graph_screen.dart';
 
+// Importa la clase ScanPage
+import 'package:abc/screens/scan_page.dart';
+
 class BluetoothScreen extends StatefulWidget {
   @override
   _BluetoothScreenState createState() => _BluetoothScreenState();
@@ -22,6 +25,7 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
   String receivedData = '';
   ValueNotifier<String> temperatureNotifier = ValueNotifier<String>('0');
   bool showMessage = false;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -120,23 +124,42 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PageView(
-      children: <Widget>[
-        ScanPage(
-          devices: devices,
-          isScanning: isScanning,
-          isConnected: isConnected,
-          showMessage: showMessage,
-          onDeviceTap: _connectToDevice,
-          onScan: _startScan,
-        ),
-        ValueListenableBuilder<String>(
-          valueListenable: temperatureNotifier,
-          builder: (context, temperature, child) {
-            return GraphScreen(temperature: temperature);
-          },
-        ),
-      ],
+    return Scaffold(
+      appBar: AppBar(
+      ),
+      body: _selectedIndex == 0
+          ? ScanPage(
+              devices: devices,
+              isScanning: isScanning,
+              isConnected: isConnected,
+              showMessage: showMessage,
+              onDeviceTap: _connectToDevice,
+              onScan: _startScan,
+            )
+          : ValueListenableBuilder<String>(
+              valueListenable: temperatureNotifier,
+              builder: (context, temperature, child) {
+                return GraphScreen(temperature: temperature);
+              },
+            ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.devices),
+            label: 'Dispositivos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.graphic_eq),
+            label: 'Gráfica',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+      ),
     );
   }
 
@@ -145,59 +168,5 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
     connection?.dispose();
     temperatureNotifier.dispose();
     super.dispose();
-  }
-}
-
-class ScanPage extends StatelessWidget {
-  final List<BluetoothDevice> devices;
-  final bool isScanning;
-  final bool isConnected;
-  final bool showMessage;
-  final Function(BluetoothDevice) onDeviceTap;
-  final VoidCallback onScan;
-
-  ScanPage({
-    required this.devices,
-    required this.isScanning,
-    required this.isConnected,
-    required this.showMessage,
-    required this.onDeviceTap,
-    required this.onScan,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          DeviceList(
-            devices: devices,
-            isScanning: isScanning,
-            onDeviceTap: onDeviceTap,
-          ),
-          SizedBox(height: 20),
-          ScanButton(
-            isScanning: isScanning,
-            onScan: onScan,
-          ),
-          if (isConnected)
-            Column(
-              children: <Widget>[
-                SizedBox(height: 20),
-                Text(
-                  'Conexión exitosa',
-                  style: TextStyle(color: Colors.green, fontSize: 16),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'Desliza hacia la izquierda para ver la gráfica',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
   }
 }

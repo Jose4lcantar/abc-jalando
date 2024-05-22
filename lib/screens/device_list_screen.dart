@@ -7,7 +7,9 @@ class DeviceListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Device List'),
+        title: Text(
+          'Rene My Love 😘😍',
+          textAlign: TextAlign.center,),
       ),
       body: BluetoothScreen(),
     );
