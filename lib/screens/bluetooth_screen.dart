@@ -7,9 +7,6 @@ import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:abc/widgets/device_list.dart';
 import 'package:abc/widgets/scan_button.dart';
-import 'package:abc/screens/graph_screen.dart';
-
-// Importa la clase ScanPage
 import 'package:abc/screens/scan_page.dart';
 
 class BluetoothScreen extends StatefulWidget {
@@ -24,6 +21,8 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
   BluetoothConnection? connection;
   String receivedData = '';
   ValueNotifier<String> temperatureNotifier = ValueNotifier<String>('0');
+  ValueNotifier<String> ambientTemperatureNotifier = ValueNotifier<String>('0');
+  ValueNotifier<String> humidityNotifier = ValueNotifier<String>('0');
   bool showMessage = false;
   int _selectedIndex = 0;
 
@@ -101,9 +100,7 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
       print('Received message: $message');
       setState(() {
         receivedData = message;
-        if (_isValidTemperature(message)) {
-          temperatureNotifier.value = message.replaceAll(RegExp(r'[^0-9.]'), '');
-        }
+        _parseReceivedData(message);
       });
     }).onDone(() {
       print('Connection closed');
@@ -113,20 +110,40 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
     });
   }
 
-  bool _isValidTemperature(String data) {
-    try {
-      double.parse(data.replaceAll(RegExp(r'[^0-9.]'), ''));
-      return true;
-    } catch (e) {
-      return false;
+  void _parseReceivedData(String message) {
+    List<String> parts = message.split(',');
+    for (String part in parts) {
+      List<String> keyValue = part.trim().split(':');
+      if (keyValue.length == 2) {
+        String key = keyValue[0].trim();
+        String value = keyValue[1].trim();
+        if (key == 'T') {
+          _saveTemperatureOfPot(value);
+        } else if (key == 'A') {
+          _saveAmbientTemperature(value);
+        } else if (key == 'H') {
+          _saveHumidity(value);
+        }
+      }
     }
+  }
+
+  void _saveTemperatureOfPot(String value) {
+    temperatureNotifier.value = value;
+  }
+
+  void _saveAmbientTemperature(String value) {
+    ambientTemperatureNotifier.value = value;
+  }
+
+  void _saveHumidity(String value) {
+    humidityNotifier.value = value;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-      ),
+      appBar: AppBar(),
       body: _selectedIndex == 0
           ? ScanPage(
               devices: devices,
@@ -136,11 +153,36 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
               onDeviceTap: _connectToDevice,
               onScan: _startScan,
             )
-          : ValueListenableBuilder<String>(
-              valueListenable: temperatureNotifier,
-              builder: (context, temperature, child) {
-                return GraphScreen(temperature: temperature);
-              },
+          : SizedBox(
+              height: 200, // Altura de la gráfica de temperatura
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: temperatureNotifier,
+                      builder: (context, temperature, child) {
+                        return Center(child: Text('Temperatura de Olla: $temperature'));
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: ambientTemperatureNotifier,
+                      builder: (context, temperature, child) {
+                        return Center(child: Text('Temperatura Ambiente: $temperature'));
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: humidityNotifier,
+                      builder: (context, humidity, child) {
+                        return Center(child: Text('Humedad: $humidity'));
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -167,6 +209,8 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
   void dispose() {
     connection?.dispose();
     temperatureNotifier.dispose();
+    ambientTemperatureNotifier.dispose();
+    humidityNotifier.dispose();
     super.dispose();
   }
 }

@@ -1,4 +1,4 @@
-// screens/graph_screen.dart
+/* // screens/graph_screen.dart
 import 'package:flutter/material.dart';
 import 'package:abc/widgets/temperature_gauge.dart';
 import 'package:abc/widgets/temperature_text.dart';
@@ -29,3 +29,4 @@ class GraphScreen extends StatelessWidget {
     );
   }
 }
+ */

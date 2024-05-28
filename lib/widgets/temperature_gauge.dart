@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/* import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 
 class TemperatureGauge extends StatelessWidget {
@@ -11,17 +11,36 @@ class TemperatureGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SfRadialGauge(
-      axes: <RadialAxis>[
-        RadialAxis(
-          minimum: 0,
-          maximum: 100,
-          ranges: _getGradientRanges(),
-          pointers: <GaugePointer>[
-            NeedlePointer(value: double.parse(temperature)),
-          ],
-        ),
-      ],
+    return Container(
+      width: 150, // Ancho ajustado
+      height: 150, // Alto ajustado
+      child: SfRadialGauge(
+        axes: <RadialAxis>[
+          RadialAxis(
+            minimum: 0,
+            maximum: 100,
+            ranges: _getGradientRanges(),
+            pointers: <GaugePointer>[
+              NeedlePointer(
+                value: double.parse(temperature),
+                needleLength: 0.6, // Longitud de la aguja ajustada
+                needleColor: Colors.black, // Color de la aguja ajustado
+                knobStyle: KnobStyle(knobRadius: 0.08), // Tamaño del nudo ajustado
+              ),
+            ],
+            annotations: <GaugeAnnotation>[
+              GaugeAnnotation(
+                angle: 90,
+                positionFactor: 0.2,
+                widget: Text(
+                  'Temperatura Olla = $temperature',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -59,3 +78,4 @@ class TemperatureGauge extends StatelessWidget {
     ];
   }
 }
+ */
