@@ -16,9 +16,9 @@ class DeviceList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return isScanning
-        ? CircularProgressIndicator()
+        ? const CircularProgressIndicator()
         : devices.isEmpty
-            ? Text('No se encontraron dispositivos Bluetooth cercanos')
+            ? const Text('No se encontraron dispositivos Bluetooth cercanos')
             : Expanded(
                 child: ListView.builder(
                   itemCount: devices.length,

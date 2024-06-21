@@ -14,7 +14,7 @@ class ScanButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: isScanning ? null : onScan,
-      child: Text('Iniciar Escaneo'),
+      child: const Text('Iniciar Escaneo'),
     );
   }
 }

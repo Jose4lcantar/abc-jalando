@@ -12,7 +12,7 @@ class TemperatureText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       'Temperatura: $temperature °C',
-      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
 }

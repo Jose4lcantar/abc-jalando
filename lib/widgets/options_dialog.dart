@@ -4,7 +4,7 @@ class OptionsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Options'),
+      title: const Text('Options'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -13,13 +13,13 @@ class OptionsDialog extends StatelessWidget {
               Navigator.pop(context); // Close the AlertDialog
               Navigator.pushNamed(context, '/bluetooth_screen');
             },
-            child: Text('Bluetooth'),
+            child: const Text('Bluetooth'),
           ),
           ElevatedButton(
             onPressed: () {
               // Add functionality for "Historial" button
             },
-            child: Text('Historial'),
+            child: const Text('Historial'),
           ),
         ],
       ),

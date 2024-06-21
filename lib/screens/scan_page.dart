@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:abc/widgets/device_list.dart';
-import 'package:abc/widgets/scan_button.dart';
 
 class ScanPage extends StatelessWidget {
   final List<BluetoothDevice> devices;
@@ -9,15 +8,13 @@ class ScanPage extends StatelessWidget {
   final bool isConnected;
   final bool showMessage;
   final Function(BluetoothDevice) onDeviceTap;
-  final VoidCallback onScan;
 
-  ScanPage({
+  const ScanPage({
     required this.devices,
     required this.isScanning,
     required this.isConnected,
     required this.showMessage,
     required this.onDeviceTap,
-    required this.onScan,
   });
 
   @override
@@ -31,13 +28,8 @@ class ScanPage extends StatelessWidget {
             isScanning: isScanning,
             onDeviceTap: onDeviceTap,
           ),
-          SizedBox(height: 20),
-          ScanButton(
-            isScanning: isScanning,
-            onScan: onScan,
-          ),
           if (isConnected)
-            Column(
+            const Column(
               children: <Widget>[
                 SizedBox(height: 20),
                 Text(

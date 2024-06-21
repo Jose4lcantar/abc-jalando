@@ -5,24 +5,31 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:abc/widgets/device_list.dart';
-import 'package:abc/widgets/scan_button.dart';
+import 'package:abc/screens/graph_screen.dart';
 import 'package:abc/screens/scan_page.dart';
 
 class BluetoothScreen extends StatefulWidget {
+  const BluetoothScreen({super.key});
   @override
-  _BluetoothScreenState createState() => _BluetoothScreenState();
+  BluetoothScreenState createState() => BluetoothScreenState();
 }
 
-class _BluetoothScreenState extends State<BluetoothScreen> {
+class BluetoothScreenState extends State<BluetoothScreen> {
   List<BluetoothDevice> devices = [];
   bool isScanning = false;
   bool isConnected = false;
   BluetoothConnection? connection;
   String receivedData = '';
-  ValueNotifier<String> temperatureNotifier = ValueNotifier<String>('0');
-  ValueNotifier<String> ambientTemperatureNotifier = ValueNotifier<String>('0');
-  ValueNotifier<String> humidityNotifier = ValueNotifier<String>('0');
+  ValueNotifier<String> temperatureNotifier =
+      ValueNotifier<String>('0'); //valor de temperatura de la olla
+  ValueNotifier<String> ambientTemperatureNotifier =
+      ValueNotifier<String>('0'); // valor de sensor de temperatura ambiente
+  ValueNotifier<String> humidityNotifier =
+      ValueNotifier<String>('0'); // valor de sensor de humedad
+  ValueNotifier<String> windSpeedNotifier =
+      ValueNotifier<String>('0'); // valor de la velocidad del viento
+  ValueNotifier<String> ultraVioletRadiation =
+      ValueNotifier<String>('0'); //valor de la radiacion solar
   bool showMessage = false;
   int _selectedIndex = 0;
 
@@ -36,7 +43,7 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
     if (Platform.isAndroid) {
       PermissionStatus permissionStatus = await Permission.location.request();
       if (permissionStatus != PermissionStatus.granted) {
-        throw Exception('Location permission not granted');
+        throw Exception('Permisos de localizacion denegadas');
       }
 
       Map<Permission, PermissionStatus> permissionStatuses = await [
@@ -44,21 +51,27 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
         Permission.bluetoothScan,
       ].request();
 
-      if (permissionStatuses[Permission.bluetoothConnect] != PermissionStatus.granted ||
-          permissionStatuses[Permission.bluetoothScan] != PermissionStatus.granted) {
-        throw Exception('Bluetooth permissions not granted');
+      if (permissionStatuses[Permission.bluetoothConnect] !=
+              PermissionStatus.granted ||
+          permissionStatuses[Permission.bluetoothScan] !=
+              PermissionStatus.granted) {
+        throw Exception('Permisos Bluetooth no concedidos');
       }
     }
 
     try {
-      bool isBluetoothOn = (await FlutterBluetoothSerial.instance.isEnabled) ?? false;
+      bool isBluetoothOn =
+          (await FlutterBluetoothSerial.instance.isEnabled) ?? false;
       if (!isBluetoothOn) {
-        bool enableBluetooth = (await FlutterBluetoothSerial.instance.requestEnable()) ?? false;
+        bool enableBluetooth =
+            (await FlutterBluetoothSerial.instance.requestEnable()) ?? false;
         if (!enableBluetooth) {
-          print('Bluetooth not enabled');
+          print('Bluetooth no disponible');
           return;
         }
       }
+      // Llama a _startScan después de inicializar Bluetooth
+      _startScan();
     } catch (e) {
       print("Error initializing Bluetooth: $e");
     }
@@ -71,13 +84,17 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
     });
 
     try {
-      List<BluetoothDevice> bondedDevices = await FlutterBluetoothSerial.instance.getBondedDevices();
+      List<BluetoothDevice> bondedDevices =
+          await FlutterBluetoothSerial.instance.getBondedDevices();
       setState(() {
         devices.addAll(bondedDevices);
         isScanning = false;
       });
     } catch (e) {
-      print("Error scanning devices: $e");
+      print("Error escaneando dispositivos: $e");
+      setState(() {
+        isScanning = false;
+      });
     }
   }
 
@@ -90,20 +107,20 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
       });
       _startListening();
     } catch (ex) {
-      print("Error connecting: $ex");
+      print("Error connectando: $ex");
     }
   }
 
   void _startListening() {
     connection?.input?.listen((Uint8List data) {
       String message = utf8.decode(data);
-      print('Received message: $message');
+      print('Recibiendo Temperatura: $message');
       setState(() {
         receivedData = message;
         _parseReceivedData(message);
       });
     }).onDone(() {
-      print('Connection closed');
+      print('Coneccion cerrada');
       setState(() {
         isConnected = false;
       });
@@ -123,6 +140,10 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
           _saveAmbientTemperature(value);
         } else if (key == 'H') {
           _saveHumidity(value);
+        } else if (key == 'V') {
+          _saveWindSpeed(value);
+        } else if (key == 'U') {
+          _saveUltraVioletRadiation(value);
         }
       }
     }
@@ -140,6 +161,14 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
     humidityNotifier.value = value;
   }
 
+  void _saveWindSpeed(String value) {
+    windSpeedNotifier.value = value;
+  }
+
+  void _saveUltraVioletRadiation(String value) {
+    ultraVioletRadiation.value = value;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,38 +180,38 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
               isConnected: isConnected,
               showMessage: showMessage,
               onDeviceTap: _connectToDevice,
-              onScan: _startScan,
             )
-          : SizedBox(
-              height: 200, // Altura de la gráfica de temperatura
-              child: Column(
-                children: [
-                  Expanded(
-                    child: ValueListenableBuilder<String>(
-                      valueListenable: temperatureNotifier,
-                      builder: (context, temperature, child) {
-                        return Center(child: Text('Temperatura de Olla: $temperature'));
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: ValueListenableBuilder<String>(
-                      valueListenable: ambientTemperatureNotifier,
-                      builder: (context, temperature, child) {
-                        return Center(child: Text('Temperatura Ambiente: $temperature'));
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: ValueListenableBuilder<String>(
+          : ValueListenableBuilder<String>(
+              valueListenable: temperatureNotifier,
+              builder: (context, temperature, child) {
+                return ValueListenableBuilder<String>(
+                  valueListenable: ambientTemperatureNotifier,
+                  builder: (context, ambientTemperature, child) {
+                    return ValueListenableBuilder<String>(
                       valueListenable: humidityNotifier,
                       builder: (context, humidity, child) {
-                        return Center(child: Text('Humedad: $humidity'));
+                        return ValueListenableBuilder<String>(
+                          valueListenable: windSpeedNotifier,
+                          builder: (context, windSpeed, child) {
+                            return ValueListenableBuilder<String>(
+                              valueListenable: ultraVioletRadiation,
+                              builder: (context, ultraVioletRadiation, child) {
+                                return GraphScreen(
+                                  temperature: temperature,
+                                  ambientTemperature: ambientTemperature,
+                                  humidity: humidity,
+                                  windSpeed: windSpeed,
+                                  ultraVioletRadiation: ultraVioletRadiation,
+                                );
+                              },
+                            );
+                          },
+                        );
                       },
-                    ),
-                  ),
-                ],
-              ),
+                    );
+                  },
+                );
+              },
             ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -211,6 +240,8 @@ class _BluetoothScreenState extends State<BluetoothScreen> {
     temperatureNotifier.dispose();
     ambientTemperatureNotifier.dispose();
     humidityNotifier.dispose();
+    windSpeedNotifier.dispose();
+    ultraVioletRadiation.dispose();
     super.dispose();
   }
 }
